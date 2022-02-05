@@ -1,0 +1,8 @@
+{
+  "Nickname": "FacegenBaseline",
+  "Visibility": "Visible",
+  "OneLineDescription": "Use default facegen override from a foundational NPC appearance mod",
+  "LongDescription": "Forwards foundational mod's NPC appearance fields to the winning override in the Synthesis patch, if overridden by another mod but facegen not altered vs the master.",
+  "PreferredAutoVersioning": "Default",
+  "RequiredMods": []
+}
