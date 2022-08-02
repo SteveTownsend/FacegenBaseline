@@ -133,6 +133,10 @@ namespace FacegenBaseline
             synthesisNpc.Weight = baselineNPC.Weight;
 
             synthesisNpc.WornArmor.SetTo(baselineNPC.WornArmor);
+
+            // import protected flag if set to true
+            if (settings.GetProtectedFlag && baselineNPC.Configuration.Flags.HasFlag(NpcConfiguration.Flag.Protected))
+                synthesisNpc.Configuration.Flags |= NpcConfiguration.Flag.Protected;
         }
     }
 }

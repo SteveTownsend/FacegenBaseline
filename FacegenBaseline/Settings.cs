@@ -17,5 +17,12 @@ namespace FacegenBaseline
         [SynthesisDescription(_excludeNPCByKeywordsDescription)]
         // public string BaselineMod { get; set; } = "MyFacegenBaseline.esp";
         public List<string> ExcludeNPCByKeywords { get; set; } = new List<string>();
+
+        const string _getProtectedFlagDescription = "Face mod can also mark changed npcs with protected flag. Enable if you need to import it also in patch.";
+        [SynthesisSettingName("Get protected flag switcher")]
+        [SynthesisTooltip(_getProtectedFlagDescription)]
+        [SynthesisDescription(_getProtectedFlagDescription)]
+        // public string BaselineMod { get; set; } = "MyFacegenBaseline.esp";
+        public bool GetProtectedFlag { get; set; } = true;
     }
 }
