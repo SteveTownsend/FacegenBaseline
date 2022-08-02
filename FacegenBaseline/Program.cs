@@ -5,6 +5,7 @@ using Mutagen.Bethesda.Skyrim;
 using Mutagen.Bethesda.Synthesis;
 using Noggog;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -35,48 +36,71 @@ namespace FacegenBaseline
             uint hasBetterFacegen = 0;
             uint useBaseline = 0;
             _state = state;
-            ModKey baselineModKey = ModKey.FromNameAndExtension(settings.BaselineMod);
-            if (!PatcherState.LoadOrder.TryGetValue(baselineModKey, out IModListing<ISkyrimModGetter>? baselineMod) || baselineMod == null || baselineMod.Mod == null)
-            {
-                throw new ArgumentException("{0} plugin not found in Load Order", settings.BaselineMod);
-            }
+
+            // no mod names in list
+            if (settings.BaselineMods.Count == 0) throw new ArgumentException("Baseline plugins found in baseline mods list");
+
+            if (settings.BaselineMods.Count > 1) settings.BaselineMods.Reverse(); // reverse order to parse first with more priority
+
 
             bool checkIfExcluded = settings.ExcludeNPCByKeywords.Count > 0;
-            foreach (var baselineNPC in baselineMod.Mod.Npcs)
-            {
-                // skip npc by editorid keyword list
-                if (baselineNPC == null) continue;
-                if (checkIfExcluded && settings.ExcludeNPCByKeywords
-                    .Any(keyword => !string.IsNullOrWhiteSpace(baselineNPC.EditorID) 
-                    && baselineNPC.EditorID.Contains(keyword))) continue;
+            if (!checkIfExcluded) Console.WriteLine($"Excluded list is empty");
 
-                // we need to introspect the provenance of the record
-                var contexts = state.LinkCache.ResolveAllContexts<INpc, INpcGetter>(baselineNPC.FormKey).ToList();
-                var currentWinner = contexts[0];
-                if (currentWinner.ModKey == baselineModKey)
+            var parsedNPCs = new HashSet<FormKey>();
+            int npcRecordsCount = 0;
+            foreach (var baselineModName in settings.BaselineMods)
+            {
+                // skip invalid mods, missing or null
+                ModKey baselineModKey = ModKey.FromNameAndExtension(baselineModName);
+                if (!PatcherState.LoadOrder.TryGetValue(baselineModKey, out IModListing<ISkyrimModGetter>? baselineMod) || baselineMod == null || baselineMod.Mod == null)
                 {
-                    Console.WriteLine("Baseline is winning override for {0}/{1:X8}", baselineNPC.Name, baselineNPC.FormKey.ID);
-                    ++alreadyWins;
-                    continue;
+                    Console.WriteLine($"{baselineModName} not found in Load Order");
                 }
-                // Compare winning override Head Parts with master - if this record is already overriding the appearance, we let it win
-                var master = contexts.Last();
-                var masterHDPTs = master.Record.HeadParts.Select(s => s.TryResolve<IHeadPartGetter>(state.LinkCache)).ToHashSet();
-                var winnerHDPTs = currentWinner.Record.HeadParts.Select(s => s.TryResolve<IHeadPartGetter>(state.LinkCache)).ToHashSet();
-                if (masterHDPTs.SetEquals(winnerHDPTs))
+
+                var baselineNPCs = baselineMod!.Mod!.Npcs;
+                npcRecordsCount += baselineNPCs.Count;
+
+                foreach (var baselineNPC in baselineNPCs)
                 {
-                    Console.WriteLine("Baseline appearance used for {0}/{1:X8}", baselineNPC.Name, baselineNPC.FormKey.ID);
-                    UseBaselineAppearance(baselineNPC, currentWinner.Record);
-                    ++useBaseline;
-                }
-                else
-                {
-                    Console.WriteLine("Appearance for {0}/{1:X8} provided by {2}", baselineNPC.Name, baselineNPC.FormKey.ID, currentWinner.ModKey.FileName);
-                    ++hasBetterFacegen;
+                    if (baselineNPC == null) continue;
+                    if (parsedNPCs.Contains(baselineNPC.FormKey)) continue; // skip already parsed
+                    if (checkIfExcluded && !string.IsNullOrWhiteSpace(baselineNPC.EditorID) && settings.ExcludeNPCByKeywords
+                        .Any(keyword => 
+                        !string.IsNullOrWhiteSpace(keyword)
+                        && baselineNPC.EditorID.Contains(keyword))) continue; // skip because edid contains keyword
+
+                    // we need to introspect the provenance of the record
+                    var contexts = state.LinkCache.ResolveAllContexts<INpc, INpcGetter>(baselineNPC.FormKey).ToList();
+                    var currentWinner = contexts[0];
+                    if (currentWinner.ModKey == baselineModKey)
+                    {
+                        Console.WriteLine("Baseline is winning override for {0}/{1:X8}", baselineNPC.Name, baselineNPC.FormKey.ID);
+                        ++alreadyWins;
+                        continue;
+                    }
+
+                    parsedNPCs.Add(baselineNPC.FormKey);
+
+                    // Compare winning override Head Parts with master - if this record is already overriding the appearance, we let it win
+                    var master = contexts.Last();
+                    var masterHDPTs = master.Record.HeadParts.Select(s => s.TryResolve<IHeadPartGetter>(state.LinkCache)).ToHashSet();
+                    var winnerHDPTs = currentWinner.Record.HeadParts.Select(s => s.TryResolve<IHeadPartGetter>(state.LinkCache)).ToHashSet();
+                    if (masterHDPTs.SetEquals(winnerHDPTs))
+                    {
+                        Console.WriteLine("Baseline appearance used for {0}/{1:X8}", baselineNPC.Name, baselineNPC.FormKey.ID);
+                        UseBaselineAppearance(baselineNPC, currentWinner.Record);
+                        ++useBaseline;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Appearance for {0}/{1:X8} provided by {2}", baselineNPC.Name, baselineNPC.FormKey.ID, currentWinner.ModKey.FileName);
+                        ++hasBetterFacegen;
+                    }
                 }
             }
+
             Console.WriteLine("NPC Records {0} : Baseline already the winner for {1}, used as new winner for {2}, lost to better facegen for {3}",
-                baselineMod.Mod.Npcs.Count, alreadyWins, useBaseline, hasBetterFacegen);
+                npcRecordsCount, alreadyWins, useBaseline, hasBetterFacegen);
         }
 
         private static void UseBaselineAppearance(INpcGetter baselineNPC, INpcGetter currentWinner)

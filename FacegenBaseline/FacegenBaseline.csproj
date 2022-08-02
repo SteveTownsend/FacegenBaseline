@@ -13,9 +13,9 @@
   </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Mutagen.Bethesda" Version="0.35.1" />
-        <PackageReference Include="Mutagen.Bethesda.FormKeys.SkyrimSE" Version="2.1.0" />
-        <PackageReference Include="Mutagen.Bethesda.Synthesis" Version="0.21.4" />
+        <PackageReference Include="Mutagen.Bethesda" Version="0.39.3" />
+        <PackageReference Include="Mutagen.Bethesda.FormKeys.SkyrimSE" Version="3.0.0" />
+        <PackageReference Include="Mutagen.Bethesda.Synthesis" Version="0.23.7" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     </ItemGroup>
 
