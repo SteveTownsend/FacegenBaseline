@@ -1,12 +1,12 @@
-using System;
-using System.Linq;
 using Mutagen.Bethesda;
-using Mutagen.Bethesda.Synthesis;
-using Mutagen.Bethesda.Skyrim;
-using System.Threading.Tasks;
 using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Order;
+using Mutagen.Bethesda.Skyrim;
+using Mutagen.Bethesda.Synthesis;
 using Noggog;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace FacegenBaseline
 {
@@ -43,6 +43,12 @@ namespace FacegenBaseline
 
             foreach (var baselineNPC in baselineMod.Mod.Npcs)
             {
+                // skip npc by editorid keyword list
+                if (baselineNPC == null) continue;
+                if (settings.ExcludeNPCByKeywords
+                    .Any(keyword => !string.IsNullOrWhiteSpace(baselineNPC.EditorID) 
+                    && baselineNPC.EditorID.Contains(keyword))) continue;
+
                 // we need to introspect the provenance of the record
                 var contexts = state.LinkCache.ResolveAllContexts<INpc, INpcGetter>(baselineNPC.FormKey).ToList();
                 var currentWinner = contexts[0];
