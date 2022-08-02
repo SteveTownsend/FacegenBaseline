@@ -41,11 +41,12 @@ namespace FacegenBaseline
                 throw new ArgumentException("{0} plugin not found in Load Order", settings.BaselineMod);
             }
 
+            bool checkIfExcluded = settings.ExcludeNPCByKeywords.Count > 0;
             foreach (var baselineNPC in baselineMod.Mod.Npcs)
             {
                 // skip npc by editorid keyword list
                 if (baselineNPC == null) continue;
-                if (settings.ExcludeNPCByKeywords
+                if (checkIfExcluded && settings.ExcludeNPCByKeywords
                     .Any(keyword => !string.IsNullOrWhiteSpace(baselineNPC.EditorID) 
                     && baselineNPC.EditorID.Contains(keyword))) continue;
 
