@@ -55,8 +55,8 @@ namespace FacegenBaseline
                 // Compare winning override Head Parts with master - if this record is already overriding the appearance, we let it win
                 var master = contexts.Last();
                 // If only one of winner or master uses Traits, that is also a mismatch
-                if (master.Record.Configuration.Flags.HasFlag(NpcConfiguration.TemplateFlag.Traits) !=
-                    currentWinner.Record.Configuration.Flags.HasFlag(NpcConfiguration.TemplateFlag.Traits))
+                if (master.Record.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Traits) !=
+                    currentWinner.Record.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Traits))
                 {
                     Console.WriteLine("Appearance for {0}/{1:X8} from Traits in {2}", baselineNPC.Name, baselineNPC.FormKey.ID, currentWinner.ModKey.FileName);
                     ++hasBetterFacegen;
