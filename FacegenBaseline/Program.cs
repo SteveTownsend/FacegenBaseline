@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Order;
 using Noggog;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace FacegenBaseline
 {
@@ -28,6 +30,8 @@ namespace FacegenBaseline
                 .AddPatch<ISkyrimMod, ISkyrimModGetter>(RunPatch)
                 .Run(args);
         }
+        private static ISet<string> _gameMasters = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {"Skyrim.esm", "Dawnguard.esm", "HearthFires.esm", "Dragonborn.esm", "unofficial skyrim special edition patch.esp"};
 
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
@@ -45,33 +49,49 @@ namespace FacegenBaseline
             {
                 // we need to introspect the provenance of the record
                 var contexts = state.LinkCache.ResolveAllContexts<INpc, INpcGetter>(baselineNPC.FormKey).ToList();
-                var currentWinner = contexts[0];
-                if (currentWinner.ModKey == baselineModKey)
+                var currentWinner = contexts[0].Record;
+                if (currentWinner.FormKey.ModKey == baselineModKey)
                 {
                     Console.WriteLine("Baseline is winning override for {0}/{1:X8}", baselineNPC.Name, baselineNPC.FormKey.ID);
                     ++alreadyWins;
                     continue;
                 }
                 // Compare winning override Head Parts with master - if this record is already overriding the appearance, we let it win
-                var master = contexts.Last();
-                // If only one of winner or master uses Traits, that is also a mismatch
-                if (master.Record.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Traits) !=
-                    currentWinner.Record.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Traits))
+                INpcGetter? master = null;
+                contexts.Reverse();
+                // find latest override by 'game masters' including all DLC plus USSEP, Creation Club ignored for now
+                foreach (var context in contexts)
                 {
-                    Console.WriteLine("Appearance for {0}/{1:X8} from Traits in {2}", baselineNPC.Name, baselineNPC.FormKey.ID, currentWinner.ModKey.FileName);
+                    // assumes master is in one of the game masters or USSEP
+                    if (!_gameMasters.Contains(context.ModKey.FileName.String))
+                    {
+                        break;
+                    }
+                    master = context.Record;
+                }
+                if (master is null)
+                {
+                    Console.WriteLine("Master not found for {0}/{1:X8}", baselineNPC.Name, baselineNPC.FormKey.ID);
+                    continue;
+                }
+                // If only one of winner or master uses Traits, that is also a mismatch
+                if (master.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Traits) !=
+                    currentWinner.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Traits))
+                {
+                    Console.WriteLine("Appearance for {0}/{1:X8} from Traits in {2}", baselineNPC.Name, baselineNPC.FormKey.ID, currentWinner.FormKey.ModKey.FileName);
                     ++hasBetterFacegen;
                 }
-                var masterHDPTs = master.Record.HeadParts.Select(s => s.TryResolve<IHeadPartGetter>(state.LinkCache)).ToHashSet();
-                var winnerHDPTs = currentWinner.Record.HeadParts.Select(s => s.TryResolve<IHeadPartGetter>(state.LinkCache)).ToHashSet();
+                var masterHDPTs = master.HeadParts.Select(s => s.TryResolve<IHeadPartGetter>(state.LinkCache)).ToHashSet();
+                var winnerHDPTs = currentWinner.HeadParts.Select(s => s.TryResolve<IHeadPartGetter>(state.LinkCache)).ToHashSet();
                 if (masterHDPTs.SetEquals(winnerHDPTs))
                 {
                     Console.WriteLine("Baseline appearance used for {0}/{1:X8}", baselineNPC.Name, baselineNPC.FormKey.ID);
-                    UseBaselineAppearance(baselineNPC, currentWinner.Record);
+                    UseBaselineAppearance(baselineNPC, currentWinner);
                     ++useBaseline;
                 }
                 else
                 {
-                    Console.WriteLine("Appearance for {0}/{1:X8} provided by {2}", baselineNPC.Name, baselineNPC.FormKey.ID, currentWinner.ModKey.FileName);
+                    Console.WriteLine("Appearance for {0}/{1:X8} provided by {2}", baselineNPC.Name, baselineNPC.FormKey.ID, currentWinner.FormKey.ModKey.FileName);
                     ++hasBetterFacegen;
                 }
             }
