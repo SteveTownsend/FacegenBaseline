@@ -74,6 +74,10 @@ namespace FacegenBaseline
                     Console.WriteLine("Master not found for {0}/{1:X8}", baselineNPC.Name, baselineNPC.FormKey.ID);
                     continue;
                 }
+                else
+                {
+                    Console.WriteLine("Effective master for {0}/{1:X8} found in {2}", baselineNPC.Name, baselineNPC.FormKey.ID, master.FormKey.ModKey.FileName);
+                }
                 // If only one of winner or master uses Traits, that is also a mismatch
                 if (master.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Traits) !=
                     currentWinner.Configuration.TemplateFlags.HasFlag(NpcConfiguration.TemplateFlag.Traits))
